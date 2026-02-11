@@ -1,0 +1,30 @@
+﻿----- ΓÜí STARTING SPORTSBOT DEMO ΓÜí -----
+
+1. Asking: 'Who is the GOAT of football? ΓÜ╜'
+Full Response: {
+  "reply": "Bruh, we just had this convo, fam! ≡ƒñú But I'm always down to spill the tea on the GOAT debate, no cap! Γÿò≡ƒÉÉ\n\nStill the same legendary showdown, fr fr:\n\n*   **Lionel Messi ≡ƒçª≡ƒç╖**: The wizard, the artist, the dude who makes the ball do magic. And with that World Cup trophy in his pocket? His stans are screaming GOAT from the rooftops! Γ£¿≡ƒÅå\n*   **Cristiano Ronaldo ≡ƒç╡≡ƒç╣**: The goal-scoring machine, the ultimate athlete, the relentless winner. His sheer numbers and clutch moments are just different. The \"SIUUU\" king! ≡ƒÆ¬≡ƒææ\n\nAnd obvi, we gotta shout out the legends like Pel├⌐ ≡ƒçº≡ƒç╖ and Maradona ≡ƒçª≡ƒç╖ who changed the game forever. Icons only! ≡ƒîƒ\n\nSo, who are *you* siding with today, fam? Drop your take! ≡ƒæçΓÜ╜∩╕Å"
+}
+≡ƒñû Bot Update: Bruh, we just had this convo, fam! ≡ƒñú But I'm always down to spill the tea on the GOAT debate, no cap! Γÿò≡ƒÉÉ
+
+Still the same legendary showdown, fr fr:
+
+*   **Lionel Messi ≡ƒçª≡ƒç╖**: The wizard, the artist, the dude who makes the ball do magic. And with that World Cup trophy in his pocket? His stans are screaming GOAT from the rooftops! Γ£¿≡ƒÅå
+*   **Cristiano Ronaldo ≡ƒç╡≡ƒç╣**: The goal-scoring machine, the ultimate athlete, the relentless winner. His sheer numbers and clutch moments are just different. The "SIUUU" king! ≡ƒÆ¬≡ƒææ
+
+And obvi, we gotta shout out the legends like Pel├⌐ ≡ƒçº≡ƒç╖ and Maradona ≡ƒçª≡ƒç╖ who changed the game forever. Icons only! ≡ƒîƒ
+
+So, who are *you* siding with today, fam? Drop your take! ≡ƒæçΓÜ╜∩╕Å
+
+2. Asking: 'What is the capital of Paris?' (Non-sports test)
+Full Response: {
+  "reply": "Yo fam! ≡ƒÜ¿ My connection to the Google stadium is acting up (API Error). But I'm still here! ΓÜí Try checking the API Key. No cap. ≡ƒºó"
+}
+≡ƒñû Bot Update: Yo fam! ≡ƒÜ¿ My connection to the Google stadium is acting up (API Error). But I'm still here! ΓÜí Try checking the API Key. No cap. ≡ƒºó
+
+3. Asking: 'Qui├⌐n es el rey de la arcilla en tenis?' (Multilingual Spanish)
+Full Response: {
+  "reply": "Yo fam! ≡ƒÜ¿ My connection to the Google stadium is acting up (API Error). But I'm still here! ΓÜí Try checking the API Key. No cap. ≡ƒºó"
+}
+≡ƒñû Bot Update: Yo fam! ≡ƒÜ¿ My connection to the Google stadium is acting up (API Error). But I'm still here! ΓÜí Try checking the API Key. No cap. ≡ƒºó
+
+----- ΓÜí DEMO COMPLETE ΓÜí -----
