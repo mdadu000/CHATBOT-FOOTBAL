@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: Outfit, system-ui, sans-serif;
+}
+
+.glass-panel {
+  @apply border border-white/10 bg-pitch-glass shadow-glass backdrop-blur-xl;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 157, 0.45) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 157, 0.35);
+  border-radius: 999px;
+}

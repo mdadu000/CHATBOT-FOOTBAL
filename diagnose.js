@@ -7,7 +7,7 @@ async function main() {
     try {
         // There is no listModels on genAI in node SDK easily.
         // We have to try models one by one.
-        const models = ["gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro", "gemini-2.0-flash-exp"];
+        const models = ["gemini-pro", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-pro", "gemini-2.0-flash-exp"];
 
         for (const m of models) {
             console.log(`Checking ${m}...`);

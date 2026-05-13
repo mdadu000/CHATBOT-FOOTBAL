@@ -13,10 +13,10 @@ async function listModels() {
         const result = await model.generateContent("Hello");
         console.log("Gemini-Pro Works:", result.response.text());
 
-        console.log("Trying gemini-1.5-flash...");
-        const flash = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("Trying gemini-2.5-flash...");
+        const flash = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const resultFlash = await flash.generateContent("Hello");
-        console.log("Gemini-1.5-Flash Works:", resultFlash.response.text());
+        console.log("gemini-2.5-Flash Works:", resultFlash.response.text());
 
     } catch (error) {
         console.log("Error:", error.toString());
