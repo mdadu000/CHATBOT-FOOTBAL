@@ -31,7 +31,7 @@ import { MessageBubble } from '../components/chat/MessageBubble.jsx';
 const WELCOME = {
   role: 'model',
   content:
-    "Yo fam! You're live with **SportyGenZ** — your multilingual, sports-only Gen-Z co-pilot. Ask about any league, player, or moment worth debating. No cap, we keep it on the pitch. ⚽🔥",
+    "Welcome to **Sportzy Bot** — your professional AI sports analytics specialist. Please provide your queries regarding team statistics, player performance metrics, or tactical match setups across football, cricket, basketball, tennis, or Formula 1.",
 };
 
 function uid() {
@@ -155,7 +155,7 @@ export default function ChatDashboard() {
         await loadChats();
       } catch (e) {
         if (e.name === 'AbortError') return;
-        const fallback = "Yo — that play didn't connect. Retry in a sec?";
+        const fallback = "System notification: Analysis request timed out. Please retry.";
         toast.error(e.message || 'Chat request failed');
         setMessages((prev) =>
           prev.map((msg) => (msg.id === botId ? { ...msg, content: fallback, streaming: false } : msg))
@@ -192,7 +192,7 @@ export default function ChatDashboard() {
   const clearChat = () => {
     cancelSpeech();
     newChat();
-    toast.success('Fresh pitch — new thread ready.');
+    toast.success('Session reinitialized.');
   };
 
   const exportChat = () => {
@@ -200,7 +200,7 @@ export default function ChatDashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sportygenz-chat-${chatId || 'draft'}.json`;
+    a.download = `sportzybot-chat-${chatId || 'draft'}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -208,7 +208,7 @@ export default function ChatDashboard() {
   const deleteRemote = async (id) => {
     try {
       await api.delete(`/api/chats/${id}`);
-      toast.success('Thread deleted.');
+      toast.success('Thread removed.');
       if (chatId === id) newChat();
       await loadChats();
     } catch (e) {
@@ -216,10 +216,10 @@ export default function ChatDashboard() {
     }
   };
 
-  const aiStatus = listening ? 'Listening' : thinking ? 'Thinking' : speaking ? 'Speaking' : 'Idle';
+  const aiStatus = listening ? 'Listening' : thinking ? 'Processing' : speaking ? 'Speaking' : 'Idle';
 
   return (
-    <div className="flex h-full min-h-0 bg-gradient-to-br from-pitch-bg via-[#0b0f14] to-pitch-bg">
+    <div className="flex h-full min-h-0 bg-slate-100 dark:bg-gradient-to-br dark:from-pitch-bg dark:via-[#0b0f14] dark:to-pitch-bg text-slate-800 dark:text-slate-100 transition-colors duration-300">
       <ChatSidebar
         chats={chats}
         activeChatId={chatId}
@@ -231,20 +231,20 @@ export default function ChatDashboard() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3 backdrop-blur-md md:px-6">
+        <header className="flex items-center gap-3 border-b border-slate-200 dark:border-white/10 bg-white/70 dark:bg-transparent px-4 py-3 backdrop-blur-md md:px-6 transition-colors duration-300">
           <button
             type="button"
-            className="rounded-xl p-2 hover:bg-white/5 md:hidden"
+            className="rounded-xl p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 md:hidden transition-colors"
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </button>
           <Activity className="hidden h-7 w-7 text-neon md:block" />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold tracking-tight">SportyGenZ</h1>
-            <p className="truncate text-xs text-slate-500">Signed in as {user?.name}</p>
+            <h1 className="truncate text-lg font-bold tracking-tight text-slate-900 dark:text-white">Sportzy Bot</h1>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {user?.name}</p>
           </div>
-          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300 md:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-1 text-xs text-slate-600 dark:text-slate-300 md:flex shadow-sm dark:shadow-none transition-colors">
             <span className="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_#00ff9d]" />
             AI: {aiStatus}
           </div>
@@ -252,7 +252,7 @@ export default function ChatDashboard() {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="max-w-[7.5rem] rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs outline-none md:max-w-[10rem]"
+              className="max-w-[7.5rem] rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/30 px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none md:max-w-[10rem] shadow-sm dark:shadow-none transition-colors"
             >
               {LANGUAGES.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -262,18 +262,18 @@ export default function ChatDashboard() {
             </select>
             <button
               type="button"
-              className="rounded-lg p-2 hover:bg-white/5"
+              className="rounded-lg p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors"
               onClick={toggle}
               title="Toggle theme"
             >
               {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <Link to="/profile" className="rounded-lg p-2 hover:bg-white/5" title="Profile">
+            <Link to="/profile" className="rounded-lg p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors" title="Profile">
               <UserRound className="h-5 w-5" />
             </Link>
             <button
               type="button"
-              className="rounded-lg p-2 text-rose-300 hover:bg-white/5"
+              className="rounded-lg p-2 text-rose-500 dark:text-rose-300 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors"
               title="Logout"
               onClick={() => {
                 cancelSpeech();
@@ -300,12 +300,12 @@ export default function ChatDashboard() {
           {thinking && (
             <div className="flex items-center gap-2 text-xs text-slate-500">
               <MessageCircle className="h-4 w-4 animate-bounce text-neon" />
-              SportyGenZ is cooking up a take…
+              Sportzy Bot is processing metrics…
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/10 bg-pitch-panel/80 px-4 py-3 backdrop-blur-xl md:px-8">
+        <div className="border-t border-slate-200 dark:border-white/10 bg-white/90 dark:bg-pitch-panel/80 px-4 py-3 backdrop-blur-xl md:px-8 transition-colors duration-300">
           {interim && (
             <div className="mb-2 rounded-xl border border-neon/20 bg-neon/5 px-3 py-2 text-xs text-neon">
               <span className="font-semibold">Live transcript: </span>
@@ -314,17 +314,17 @@ export default function ChatDashboard() {
           )}
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/30 p-1">
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-black/30 p-1 transition-colors">
               <button
                 type="button"
-                className={`rounded-full px-3 py-1 text-xs font-medium ${voiceGender === 'male' ? 'bg-neon text-pitch-bg' : 'text-slate-400'}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${voiceGender === 'male' ? 'bg-neon text-pitch-bg' : 'text-slate-600 dark:text-slate-400'}`}
                 onClick={() => setVoiceGender('male')}
               >
                 Male voice
               </button>
               <button
                 type="button"
-                className={`rounded-full px-3 py-1 text-xs font-medium ${voiceGender === 'female' ? 'bg-neon text-pitch-bg' : 'text-slate-400'}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${voiceGender === 'female' ? 'bg-neon text-pitch-bg' : 'text-slate-600 dark:text-slate-400'}`}
                 onClick={() => setVoiceGender('female')}
               >
                 Female voice
@@ -333,13 +333,13 @@ export default function ChatDashboard() {
             <button
               type="button"
               onClick={() => setMuted((m) => !m)}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs hover:bg-white/5"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-transparent px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm dark:shadow-none transition-colors"
             >
               {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               {muted ? 'Muted' : 'Talkback on'}
             </button>
             {!voiceSupported && (
-              <span className="text-xs text-amber-400">Voice not supported in this browser.</span>
+              <span className="text-xs text-amber-500 dark:text-amber-400">Voice telemetry unavailable.</span>
             )}
           </div>
 
@@ -359,24 +359,24 @@ export default function ChatDashboard() {
               type="button"
               disabled={!voiceSupported || thinking}
               onClick={() => (listening ? stopListening() : startListening())}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
-                listening ? 'bg-rose-500/20 text-rose-200 ring-1 ring-rose-400/40' : 'bg-neon/20 text-neon ring-1 ring-neon/40'
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                listening ? 'bg-rose-500/20 text-rose-600 dark:text-rose-200 ring-1 ring-rose-400/40' : 'bg-neon/20 text-emerald-700 dark:text-neon ring-1 ring-neon/40'
               } disabled:opacity-40`}
             >
               {listening ? (
                 <>
-                  <MicOff className="h-4 w-4" /> Stop listening
+                  <MicOff className="h-4 w-4" /> Terminate capture
                 </>
               ) : (
                 <>
-                  <Mic className="h-4 w-4" /> Start listening
+                  <Mic className="h-4 w-4" /> Start capture
                 </>
               )}
             </button>
             {speaking && (
-              <span className="flex items-center gap-2 text-xs text-neon">
+              <span className="flex items-center gap-2 text-xs text-emerald-700 dark:text-neon">
                 <span className="inline-flex h-2 w-2 animate-ping rounded-full bg-neon" />
-                AI is speaking…
+                Audio readout active…
               </span>
             )}
           </div>
@@ -385,7 +385,7 @@ export default function ChatDashboard() {
             <button
               type="button"
               onClick={clearChat}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-transparent px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm dark:shadow-none transition-colors"
             >
               <Eraser className="h-3.5 w-3.5" />
               Clear chat
@@ -393,7 +393,7 @@ export default function ChatDashboard() {
             <button
               type="button"
               onClick={exportChat}
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-transparent px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 shadow-sm dark:shadow-none transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
               Export JSON
@@ -402,8 +402,8 @@ export default function ChatDashboard() {
 
           <form onSubmit={onSubmit} className="mt-3 flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm outline-none ring-neon/20 focus:ring-2"
-              placeholder="Ask about any sport…"
+              className="min-w-0 flex-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none ring-neon/20 focus:ring-2 placeholder-slate-400 dark:placeholder-slate-500 transition-colors shadow-inner dark:shadow-none"
+              placeholder="Ask Sportzy Bot for professional analysis…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={thinking}
@@ -411,7 +411,7 @@ export default function ChatDashboard() {
             <button
               type="submit"
               disabled={thinking || !input.trim()}
-              className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-pitch-bg shadow-neon disabled:opacity-40"
+              className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-neon px-5 py-3 text-sm font-semibold text-pitch-bg shadow-neon disabled:opacity-40 hover:brightness-110 transition"
             >
               <Send className="h-4 w-4" />
               Send

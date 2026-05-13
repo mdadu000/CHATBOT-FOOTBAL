@@ -26,13 +26,13 @@ export function ChatSidebar({
         )}
       </AnimatePresence>
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-white/10 bg-pitch-panel/95 p-4 backdrop-blur-xl transition-transform md:static md:z-0 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-slate-200 dark:border-white/10 bg-white/95 dark:bg-pitch-panel/95 p-4 backdrop-blur-xl transition-all md:static md:z-0 md:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <div className="mb-4 flex items-center justify-between md:hidden">
-          <span className="text-sm font-semibold">Conversations</span>
-          <button type="button" className="rounded-lg p-2 hover:bg-white/5" onClick={onClose}>
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Conversations</span>
+          <button type="button" className="rounded-lg p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" onClick={onClose}>
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -42,17 +42,17 @@ export function ChatSidebar({
             onNew();
             onClose();
           }}
-          className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-neon/15 py-2.5 text-sm font-semibold text-neon ring-1 ring-neon/30 hover:bg-neon/25"
+          className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-neon/15 py-2.5 text-sm font-semibold text-emerald-800 dark:text-neon ring-1 ring-neon/30 hover:bg-neon/25 transition-colors"
         >
           <MessageSquarePlus className="h-4 w-4" />
-          New chat
+          New Session
         </button>
         <div className="scroll-thin flex-1 space-y-1 overflow-y-auto pr-1">
           {chats.map((c) => (
             <div
               key={c.id}
-              className={`group flex items-stretch gap-1 rounded-xl border ${
-                activeChatId === c.id ? 'border-neon/40 bg-neon/10' : 'border-transparent hover:bg-white/5'
+              className={`group flex items-stretch gap-1 rounded-xl border transition-colors ${
+                activeChatId === c.id ? 'border-neon/40 bg-neon/10' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'
               }`}
             >
               <button
@@ -63,13 +63,13 @@ export function ChatSidebar({
                 }}
                 className="min-w-0 flex-1 px-3 py-2 text-left"
               >
-                <p className="truncate text-sm font-medium text-slate-100">{c.title}</p>
-                <p className="truncate text-xs text-slate-500">{c.preview}</p>
+                <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{c.title}</p>
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">{c.preview}</p>
               </button>
               <button
                 type="button"
                 title="Delete"
-                className="px-2 text-slate-500 opacity-0 transition hover:text-rose-400 group-hover:opacity-100"
+                className="px-2 text-slate-400 dark:text-slate-500 opacity-0 transition hover:text-rose-500 dark:hover:text-rose-400 group-hover:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(c.id);
@@ -79,7 +79,7 @@ export function ChatSidebar({
               </button>
             </div>
           ))}
-          {!chats.length && <p className="px-2 py-6 text-center text-xs text-slate-500">No saved threads yet.</p>}
+          {!chats.length && <p className="px-2 py-6 text-center text-xs text-slate-500 dark:text-slate-400">No saved threads yet.</p>}
         </div>
       </aside>
     </>

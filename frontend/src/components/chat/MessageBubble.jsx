@@ -15,21 +15,21 @@ export function MessageBubble({ role, content, streaming, fromVoice }) {
     >
       <div
         dir="auto"
-        className={`relative rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-lg ${
+        className={`relative rounded-2xl px-4 py-3 text-sm leading-relaxed transition-all ${
           isUser
-            ? 'bg-neon/90 text-pitch-bg'
-            : 'border border-white/10 bg-white/5 text-slate-100 backdrop-blur-md'
+            ? 'bg-neon text-emerald-950 font-medium shadow-md'
+            : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-800 dark:text-slate-100 backdrop-blur-md shadow-sm dark:shadow-lg'
         }`}
       >
         {fromVoice && isUser && (
-          <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-pitch-bg/70">
+          <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-900/80">
             <Mic className="h-3 w-3" /> Voice
           </span>
         )}
         {isUser ? (
           <p className="whitespace-pre-wrap">{content}</p>
         ) : (
-          <div className="markdown-body space-y-2 [&_a]:text-neon [&_code]:rounded [&_code]:bg-black/40 [&_code]:px-1 [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
+          <div className="markdown-body space-y-2 [&_a]:text-emerald-700 dark:[&_a]:text-neon [&_code]:rounded [&_code]:bg-slate-100 dark:[&_code]:bg-black/40 [&_code]:px-1 [&_code]:text-slate-900 dark:[&_code]:text-slate-100 [&_p]:m-0 [&_ul]:my-1 [&_li]:my-0.5">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || (streaming ? '…' : '')}</ReactMarkdown>
           </div>
         )}
