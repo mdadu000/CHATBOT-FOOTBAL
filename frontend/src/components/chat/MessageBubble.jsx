@@ -3,8 +3,18 @@ import remarkGfm from 'remark-gfm';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 
+/** Returns true for raw Groq tool-call JSON that leaked into the DB from a previous bug */
+function isRawToolCall(content) {
+  if (!content || typeof content !== 'string') return false;
+  const t = content.trim();
+  return (t.startsWith('[{"name"') || t.startsWith('[{ "name"')) && t.includes('search_sports_web');
+}
+
 export function MessageBubble({ role, content, streaming, fromVoice }) {
   const isUser = role === 'user';
+
+  // Hide any bubble that contains raw tool-call JSON (old artifact from a previous bug)
+  if (!isUser && isRawToolCall(content)) return null;
 
   return (
     <motion.div

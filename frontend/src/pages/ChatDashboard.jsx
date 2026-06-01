@@ -6,6 +6,7 @@ import {
   Activity,
   Download,
   Eraser,
+  Globe,
   LogOut,
   Menu,
   MessageCircle,
@@ -28,15 +29,15 @@ import { useVoiceAssistant } from '../hooks/useVoiceAssistant.js';
 import { ChatSidebar } from '../components/chat/ChatSidebar.jsx';
 import { MessageBubble } from '../components/chat/MessageBubble.jsx';
 
-const WELCOME = {
-  role: 'model',
-  content:
-    "Welcome to **Sportzy Bot** — your professional AI sports analytics specialist. Please provide your queries regarding team statistics, player performance metrics, or tactical match setups across football, cricket, basketball, tennis, or Formula 1.",
-};
-
 function uid() {
   return crypto.randomUUID();
 }
+
+const WELCOME = {
+  role: 'model',
+  content:
+    "Welcome to **Sportzy Bot** — your professional AI sports analyst and elite tactical coach. I deliver direct, concise insights grounded in authentic real-time data from open-source telemetry feeds, and strictly adhere to certified federation manuals for all official rules and regulations across ANY sport globally.\n\n🌱 **Absolute Beginner?** Simply ask for our **'Beginner to Pro Guide'** to start your custom step-by-step roadmap!",
+};
 
 export default function ChatDashboard() {
   const { user, token, logout } = useAuth();
@@ -244,6 +245,12 @@ export default function ChatDashboard() {
             <h1 className="truncate text-lg font-bold tracking-tight text-slate-900 dark:text-white">Sportzy Bot</h1>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">Signed in as {user?.name}</p>
           </div>
+          <Link
+            to="/sports"
+            className="hidden items-center gap-1.5 rounded-xl border border-neon/20 bg-neon/5 px-3 py-1.5 text-xs font-semibold text-neon hover:bg-neon/10 transition-colors md:flex"
+          >
+            <Globe className="h-3.5 w-3.5" /> Sports Hub
+          </Link>
           <div className="hidden items-center gap-2 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-1 text-xs text-slate-600 dark:text-slate-300 md:flex shadow-sm dark:shadow-none transition-colors">
             <span className="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_#00ff9d]" />
             AI: {aiStatus}
@@ -403,7 +410,7 @@ export default function ChatDashboard() {
           <form onSubmit={onSubmit} className="mt-3 flex gap-2">
             <input
               className="min-w-0 flex-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 outline-none ring-neon/20 focus:ring-2 placeholder-slate-400 dark:placeholder-slate-500 transition-colors shadow-inner dark:shadow-none"
-              placeholder="Ask Sportzy Bot for professional analysis…"
+              placeholder="Ask about any sport, rules, history, or say 'Beginner guide'…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={thinking}

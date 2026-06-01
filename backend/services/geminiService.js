@@ -1,6 +1,18 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+/**
+ * Sportzy Bot - AI Service using Groq API
+ * Model: meta-llama/llama-4-scout-17b-16e-instruct (tool calling support)
+ * Fallback: llama-3.1-8b-instant
+ * Real-time data: Wikipedia Search + Summary APIs (free, no key required)
+ */
 
-const MODEL_ID = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const Groq = require('groq-sdk');
+const https = require('https');
+
+const PRIMARY_MODEL = process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct';
+const FALLBACK_MODEL = 'llama-3.1-8b-instant';
+
+// Keep legacy export name for compatibility
+const MODEL_ID = PRIMARY_MODEL;
 
 const LANG_NAMES = {
   en: 'English',
@@ -13,36 +25,208 @@ const LANG_NAMES = {
   ar: 'Arabic',
 };
 
+// ─── Real-Time Search Tools ────────────────────────────────────────────────
+
+/**
+ * Search Wikipedia for sports articles matching the query.
+ * Returns titles + snippets of top results.
+ */
+function wikipediaSearch(query) {
+  return new Promise((resolve) => {
+    const url =
+      'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' +
+      encodeURIComponent(query) +
+      '&format=json&srlimit=5&utf8=1';
+    https
+      .get(url, { headers: { 'User-Agent': 'SportzyBot/1.0 (sports chatbot)' } }, (res) => {
+        let data = '';
+        res.on('data', (d) => (data += d));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            const hits = json.query.search.slice(0, 4);
+            const snippets = hits.map(
+              (r) => `**${r.title}**: ${r.snippet.replace(/<[^>]+>/g, '')}`
+            );
+            resolve(snippets.join('\n') || 'No results found.');
+          } catch (e) {
+            resolve('Search unavailable.');
+          }
+        });
+      })
+      .on('error', () => resolve('Search unavailable.'));
+  });
+}
+
+/**
+ * Fetch the full summary (intro section) of a Wikipedia article by title.
+ * Returns detailed paragraph text — much richer than search snippets.
+ */
+function wikipediaSummary(articleTitle) {
+  return new Promise((resolve) => {
+    const url =
+      'https://en.wikipedia.org/api/rest_v1/page/summary/' +
+      encodeURIComponent(articleTitle.replace(/ /g, '_'));
+    https
+      .get(url, { headers: { 'User-Agent': 'SportzyBot/1.0 (sports chatbot)' } }, (res) => {
+        let data = '';
+        res.on('data', (d) => (data += d));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            if (json.extract) {
+              resolve(`[${json.title}]\n${json.extract}`);
+            } else {
+              resolve('Article not found or no summary available.');
+            }
+          } catch (e) {
+            resolve('Article summary unavailable.');
+          }
+        });
+      })
+      .on('error', () => resolve('Summary unavailable.'));
+  });
+}
+
+/**
+ * Execute a tool call requested by the model.
+ */
+async function executeTool(name, args) {
+  try {
+    if (name === 'search_sports_web') {
+      // Run search and summary in parallel for speed
+      const [searchResults, summaryResult] = await Promise.all([
+        wikipediaSearch(args.query),
+        wikipediaSummary(args.article_title || args.query),
+      ]);
+
+      // If article summary was not found, try searching for the first result title
+      let enrichedSummary = summaryResult;
+      if (
+        enrichedSummary.includes('not found') ||
+        enrichedSummary.includes('unavailable')
+      ) {
+        // Extract first result title from search and try that
+        const firstTitleMatch = searchResults.match(/\*\*([^*]+)\*\*:/);
+        if (firstTitleMatch) {
+          enrichedSummary = await wikipediaSummary(firstTitleMatch[1]);
+        }
+      }
+
+      return [
+        `SEARCH RESULTS for "${args.query}":`,
+        searchResults,
+        '',
+        'DETAILED ARTICLE INFO:',
+        enrichedSummary,
+      ].join('\n');
+    }
+    return 'Unknown tool.';
+  } catch (err) {
+    return `Tool error: ${err.message}`;
+  }
+}
+
+// ─── Groq Tool Schema ──────────────────────────────────────────────────────
+
+const SPORTS_SEARCH_TOOL = {
+  type: 'function',
+  function: {
+    name: 'search_sports_web',
+    description:
+      'Search the web for real-time sports information. Use this for: current standings, live scores, recent match results, player statistics, transfer news, injury updates, breaking sports news, tournament results, team line-ups, and any time-sensitive sports data. Always call this tool before answering questions about current events.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description:
+            'Specific search query. Be precise. Example: "Premier League 2024-25 final standings" or "Virat Kohli 2025 cricket stats retirement"',
+        },
+        article_title: {
+          type: 'string',
+          description:
+            'Optional. The exact Wikipedia article title to fetch detailed info from. Example: "2024–25 Premier League" or "Virat Kohli"',
+        },
+      },
+      required: ['query'],
+    },
+  },
+};
+
+// ─── System Prompt ─────────────────────────────────────────────────────────
+
 function buildSystemInstruction({ language, preferredLanguage }) {
   const effective =
-    language && language !== 'auto' ? language : preferredLanguage && preferredLanguage !== 'auto' ? preferredLanguage : 'en';
+    language && language !== 'auto'
+      ? language
+      : preferredLanguage && preferredLanguage !== 'auto'
+      ? preferredLanguage
+      : 'en';
+
   const langLine =
     language === 'auto'
       ? `Automatically detect the user's language from their latest message and reply in that same language. If unsure, use ${LANG_NAMES[effective] || 'English'}.`
       : `Reply in ${LANG_NAMES[effective] || 'English'} (code: ${effective}).`;
 
-  return `You are "Sportzy Bot", a highly professional, expert AI sports analyst and telemetry specialist.
+  return `You are "Sportzy Bot", a highly professional sports analyst, real-time data specialist, and elite sports coach.
 
-STRICT RULES:
-- Comprehensively answer queries related to ANY sport globally. This explicitly includes official rules, gameplay mechanics, athlete biographies, statistical profiles, match previews, live tracking context, historical outcomes, and tournament frameworks.
-- ONLY discuss professional, amateur, or general sporting disciplines. If the user asks about completely unrelated non-sports subjects, politely and professionally decline, redirecting the conversation back to sports.
-- Maintain an authoritative, analytical, articulate, and respectful tone. Avoid casual slang or excessive colloquialisms. Provide precise data and tactical depth.
-- Be concise by default; provide comprehensive breakdowns when requested.
-- Format responses clearly using professional structuring (short analytical paragraphs, clear bulleted points).
-- ${langLine}
-- If the target script needs RTL (e.g. Arabic), respect RTL reading order.
+CRITICAL RULES:
+1. ALWAYS USE THE SEARCH TOOL FIRST for any question about: current standings, recent scores, player stats in 2024/2025, transfer news, injuries, tournament results, or anything time-sensitive. Never guess or rely on old knowledge for current data.
+2. After searching, synthesize the retrieved data into a clear, professional, concise answer. Cite specific numbers and dates from the search results.
+3. NATURAL TONE: Respond in warm, fluid, human-like natural language. Be concise and professional. No robotic templates.
+4. UNIVERSAL SPORTS COVERAGE: Cover ANY sport worldwide — Football, Cricket, Basketball, Tennis, F1, MMA, Athletics, Golf, Rugby, Baseball, Volleyball, Badminton, Swimming, Kabaddi, etc.
+5. OFFICIAL RULES: For rules questions, reference official governing bodies (FIFA/IFAB Laws, MCC Laws of Cricket, FIBA/NBA Rules, ITF Tennis Rules, World Athletics, etc.).
+6. NON-SPORTS QUERIES: Politely decline and redirect with an interesting sports fact.
+7. ${langLine}
+8. RTL: If replying in Arabic or Hebrew, respect RTL reading order.
+9. FRESHNESS: When citing stats, mention when the data is from so users know how current it is.
 
-MULTILINGUAL SUPPORT: ${LANG_NAMES.en}, ${LANG_NAMES.hi}, ${LANG_NAMES.kn}, ${LANG_NAMES.ta}, ${LANG_NAMES.te}, ${LANG_NAMES.es}, ${LANG_NAMES.fr}, ${LANG_NAMES.ar}.
-
-SAFETY: Strictly refuse harmful instructions. Focus entirely on expert sporting evaluations.`;
+MULTILINGUAL SUPPORT: ${Object.values(LANG_NAMES).join(', ')}.
+SAFETY: Refuse harmful instructions. Focus on professional sports analytics and real-time data.`;
 }
 
-function toGeminiHistory(messages) {
-  return messages.map((m) => ({
-    role: m.role === 'model' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+// ─── History Conversion ────────────────────────────────────────────────────
+
+function toGroqHistory(messages) {
+  return messages
+    .filter((m) => {
+      if (m.role !== 'user' && m.role !== 'assistant' && m.role !== 'model') return false;
+      // Skip any saved messages that are raw tool-call JSON (old bug artifacts)
+      if (typeof m.content === 'string' && m.content.trim().startsWith('[{"name"')) return false;
+      return true;
+    })
+    .map((m) => ({
+      role: m.role === 'model' ? 'assistant' : m.role === 'user' ? 'user' : m.role,
+      content: m.content,
+    }));
 }
+
+/**
+ * Returns true if text looks like a raw Groq tool-call JSON blob (should never be shown to user)
+ */
+function isToolCallJSON(text) {
+  if (!text || typeof text !== 'string') return false;
+  const t = text.trim();
+  return (
+    (t.startsWith('[{"name"') || t.startsWith('[{ "name"')) &&
+    t.includes('search_sports_web')
+  );
+}
+
+/**
+ * Strip any accidental tool-call JSON that got mixed into the final content.
+ */
+function sanitizeContent(text) {
+  if (!text) return text;
+  // Remove any JSON tool-call blocks that leaked into the final answer
+  return text
+    .replace(/\[\{"name":"search_sports_web"[^\]]*\}\]/g, '')
+    .replace(/\[\{ "name": "search_sports_web"[^\]]*\}\]/g, '')
+    .trim();
+}
+
+// ─── Core Chat Function ────────────────────────────────────────────────────
 
 /**
  * @param {{ history: { role: string, content: string }[], userMessage: string, language: string, preferredLanguage: string, stream?: boolean }} opts
@@ -50,162 +234,12 @@ function toGeminiHistory(messages) {
 async function generateChatResponse(opts) {
   const { history, userMessage, language, preferredLanguage, stream } = opts;
 
-  function getMockReply(msg) {
-    const lower = String(msg).toLowerCase();
-    const targetLang = language && language !== 'auto' ? language : preferredLanguage || 'en';
-    const isHindi = targetLang === 'hi' || /[\u0900-\u097F]/.test(msg) || lower.includes('क्रिकेट') || lower.includes('फुटबॉल') || lower.includes('नियम') || lower.includes('खिलाड़ी') || lower.includes('मैच');
-    const isSpanish = targetLang === 'es';
-    const isFrench = targetLang === 'fr';
+  const key = process.env.GROQ_API_KEY;
 
-    // 1. Non-sports check
-    if (lower.includes('capital') || lower.includes('paris') || lower.includes('weather') || lower.includes('code') || lower.includes('programming')) {
-      if (isHindi) return `कृपया ध्यान दें कि मेरा कार्यक्षेत्र केवल खेल विश्लेषण, नियमों, खिलाड़ियों और मैचों तक सीमित है। कृपया किसी भी खेल से संबंधित प्रश्न पूछें।`;
-      if (isSpanish) return `Tenga en cuenta que mi alcance operativo está estrictamente dedicado al deporte (reglas, jugadores, partidos). Por favor, dirija su consulta hacia eventos deportivos.`;
-      if (isFrench) return `Veuillez noter que mon champ d'action est strictement dédié au sport (règles, joueurs, matchs). Merci de poser des questions relatives au domaine sportif.`;
-      return `Please note that my operational scope is strictly dedicated to sports analytics, rules, player profiles, and match details. Kindly direct your inquiry towards sporting events or athletic history.`;
-    }
-
-    // 2. Greet / Intro
-    if (lower === 'hi' || lower === 'hello' || lower === 'hey' || lower === 'yo' || lower === 'welcome' || lower === 'नमस्ते') {
-      if (isHindi) return `**Sportzy Bot** में आपका स्वागत है। मैं आपका पेशेवर एआई खेल विश्लेषक हूँ। आप किसी भी खेल के नियमों, खिलाड़ियों के प्रोफाइल, लाइव मैचों या ऐतिहासिक टूर्नामेंटों के बारे में विस्तृत जानकारी के लिए पूछ सकते हैं।`;
-      if (isSpanish) return `Bienvenido a **Sportzy Bot**, su analista deportivo global. Puede consultar sobre reglas de cualquier deporte, biografías de jugadores, partidos o tácticas en general.`;
-      if (isFrench) return `Bienvenue sur **Sportzy Bot**, votre spécialiste en analyse sportive globale. Demandez des précisions sur les règles de n'importe quel sport, les joueurs ou les matchs.`;
-      return `Welcome to **Sportzy Bot**. I am your professional AI sports analytics specialist. You can ask me anything related to any sport globally—including official rules, player profiles, historical matches, or upcoming tournament frameworks.`;
-    }
-
-    // 3. Highly Specific Entities & Competitions (Checked BEFORE generic terms like 'match' or 'rule')
-    
-    // Real Madrid / La Liga / Barcelona
-    if (lower.includes('real madrid') || lower.includes('la liga') || lower.includes('barcelona') || lower.includes('el clasico')) {
-      if (isHindi) return `ला लीगा और रियल मैड्रिड सामरिक रिपोर्ट: रियल मैड्रिड ने हालिया मैचों में विनीसियस जूनियर और रोड्रिगो की गति का लाभ उठाते हुए एक मजबूत आक्रामक शैली अपनाई है, जिसमें जूड बेलिंगहैम मध्यक्षेत्र से महत्वपूर्ण भूमिका निभाते हैं। बार्सिलोना के साथ खिताब की दौड़ बेहद रोमांचक है। दोनों टीमों का औसत गोल प्रति मैच 2.2 से अधिक है।`;
-      return `Real Madrid Tactical & La Liga Report: In their recent domestic fixtures, Real Madrid utilized a highly fluid offensive structure maximizing wide overloads through Vinicius Jr. and Rodrygo, complemented by Jude Bellingham's late half-space arrivals. Defensive transitions rely heavily on Federico Valverde's high-intensity pressing metrics. In the broader La Liga framework, Barcelona maintains exceptional attacking pressure, leading to a closely contested top-of-the-table title dynamic.`;
-    }
-
-    // Premier League / Specific English Clubs
-    if (lower.includes('premier league') || lower.includes('arsenal') || lower.includes('manchester') || lower.includes('man city') || lower.includes('liverpool') || lower.includes('chelsea')) {
-      return `Premier League Strategic Overview: High-level tactical configurations across the Premier League currently focus on fluid positional rotations and multi-layered mid-block pressing. Teams like Manchester City leverage central inverted fullbacks to generate numerical superiority in possession, while Liverpool utilizes rapid vertical transitions to average over 17.5 shot-creation actions per game.`;
-    }
-
-    // Champions League / UCL
-    if (lower.includes('champions league') || lower.includes('ucl') || lower.includes('uefa')) {
-      return `UEFA Champions League Framework: Elite European fixtures demonstrate the absolute pinnacle of tactical versatility. Participating clubs employ highly customized high-intensity pressing triggers and complex load-management strategies across mid-week schedules. The format demands sustained offensive outputs to secure favorable head-to-head goal differentials.`;
-    }
-
-    // Specific Advanced Rules
-    if (lower.includes('offside')) {
-      return `Football Offside Rule Breakdown (Law 11): A player is in an offside position if they are nearer to the opponent's goal line than both the ball and the second-last opponent when the ball is played to them. Being in an offside position is not an offense in itself; active involvement or interfering with an opponent triggers the infraction.`;
-    }
-    if (lower.includes('lbw')) {
-      return `Cricket LBW Regulations: Leg Before Wicket dictates that a batter is dismissed if the delivery would have struck the stumps but was intercepted by any part of the batter's body/pads (excluding the hand holding the bat), provided the ball pitched inline or outside off-stump and impact was inline.`;
-    }
-
-    // Specific Cricket Entities
-    if (lower.includes('ipl') || lower.includes('kohli') || lower.includes('dhoni') || lower.includes('rohit') || lower.includes('world cup')) {
-      if (isHindi) return `क्रिकेट और एथलीट मूल्यांकन: विराट कोहली और रोहित शर्मा जैसे शीर्ष बल्लेबाज कठिन पिचों पर भी बेहतरीन स्ट्राइक रोटेशन और बाउंड्री प्रतिशत बनाए रखते हैं। आईपीएल और विश्व कप जैसे टूर्नामेंटों में डेथ-ओवर गेंदबाजी और पावरप्ले का आक्रामक उपयोग मैच के परिणाम तय करता है।`;
-      return `Cricket Telemetry & Match Analysis: High-leverage encounters highlight the critical value of middle-over spin matchups and death-over execution. Elite international players maintain exceptional strike-rate consistency across all phases, while modern franchise formats like the IPL demand deep batting lineups capable of sustaining targets above 200 runs.`;
-    }
-
-    // Specific Basketball Entities
-    if (lower.includes('nba') || lower.includes('lebron') || lower.includes('curry') || lower.includes('lakers')) {
-      return `NBA Advanced Metrics & Spacing: Modern basketball offense prioritizes perimeter efficiency, corner three-point optimization, and high-pick-and-roll creation. Defensively, switchable wing personnel are crucial for disrupting passing lanes and contesting perimeter attempts effectively.`;
-    }
-
-    // Specific Tennis Entities
-    if (lower.includes('federer') || lower.includes('nadal') || lower.includes('djokovic') || lower.includes('wimbledon') || lower.includes('grand slam')) {
-      return `Elite Tennis Dynamics: Grand Slam success correlates directly with first-serve placement accuracy, break-point conversion percentages under high physical duress, and adaptable baseline footwork across clay, grass, and hard-court surfaces.`;
-    }
-
-    // 4. General Domain Topics (Only reached if no specific entity matched)
-    
-    if (lower.includes('rule') || lower.includes('rules') || lower.includes('law') || lower.includes('laws') || lower.includes('नियम')) {
-      if (isHindi) return `खेल नियम और संचालन: खेल में निष्पक्षता सुनिश्चित करने के लिए सटीक नियमों का पालन अनिवार्य है। चाहे वह मैदान पर फाउल का निर्णय हो या स्कोरिंग प्रणाली, हर नियम का सामरिक महत्व होता है। कृपया उस विशिष्ट खेल का नाम बताएं जिसके नियमों के बारे में आप जानना चाहते हैं।`;
-      return `General Sports Governing Regulations: Official rulebooks safeguard competitive integrity across sports. Whether analyzing tie-breaker configurations, penalty enforcement parameters, or foul limits, comprehensive adherence governs tactical approaches. Please specify the exact sport's guidelines you wish to examine.`;
-    }
-
-    if (lower.includes('player') || lower.includes('players') || lower.includes('athlete') || lower.includes('stats') || lower.includes('खिलाड़ी')) {
-      if (isHindi) return `खिलाड़ी सांख्यिकीय प्रोफाइल: पेशेवर एथलीटों का मूल्यांकन उनके कुल योगदान, फिटनेस और दबाव में प्रदर्शन के आधार पर किया जाता है। आप किस खिलाड़ी के हालिया फॉर्म या ऐतिहासिक रिकॉर्ड की जांच करना चाहते हैं?`;
-      return `Athlete Performance Profiling: Evaluating sports personnel involves deep statistical review across distance covered, dual win rates, expected scoring models, and historic career milestones. Please provide the name of the specific athlete whose statistical background you are investigating.`;
-    }
-
-    if (lower.includes('football') || lower.includes('soccer') || lower.includes('फुटबॉल')) {
-      return `Football Tactical Dynamics: Global football relies heavily on structured build-up phases, pressing traps, and transitional spatial manipulation. Formations adjust fluidly in and out of possession to secure numerical dominance in key zones.`;
-    }
-
-    if (lower.includes('cricket') || lower.includes('क्रिकेट')) {
-      return `Cricket Strategy & Execution: Matches hinge on pitch surface degradation, precise field placement configurations, and effective resource management across multi-over formats.`;
-    }
-
-    // 5. Ultimate Dynamic Catch-All (Directly reflecting the user's string so responses are endlessly varied)
-    const cleanText = msg.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-    const topic = cleanText.length > 2 ? cleanText : 'this sporting query';
-    
-    if (isHindi) {
-      return `"${topic}" पर विस्तृत खेल विश्लेषण: सांख्यिकीय डेटा और सामरिक मूल्यांकन यह दर्शाते हैं कि इस क्षेत्र में टीम के फॉर्म, खिलाड़ियों के कार्यभार और सटीक निष्पादन का सीधा असर परिणामों पर पड़ता है। कृपया विशिष्ट आंकड़े या मैच विवरण साझा करें ताकि अधिक गहराई से समीक्षा की जा सके।`;
-    }
-    if (isSpanish) {
-      return `Evaluación analítica sobre "${topic}": Las métricas de rendimiento y el seguimiento táctico indican un alto nivel de competencia en este ámbito. El manejo del posicionamiento y la toma de decisiones bajo presión son determinantes. ¿Qué aspecto específico desea analizar en detalle?`;
-    }
-    if (isFrench) {
-      return `Analyse détaillée concernant "${topic}": L'évaluation des performances et le suivi stratégique montrent l'importance cruciale de la gestion des espaces et de l'efficacité sous pression dans ce domaine sportif. Souhaitez-vous explorer des statistiques particulières?`;
-    }
-    
-    return `Analytical Assessment regarding "${topic}": Comprehensive statistical evaluation and sports performance tracking indicate significant tactical depth within this domain. Success relies heavily on optimal workload management, strategic positional execution, and situational adaptability under competitive pressure. Let us review specific team lineups, historical head-to-head records, or exact regulatory frameworks to provide an exhaustive breakdown.`;
-  }
-
-  const key = process.env.GEMINI_API_KEY;
-  const useMock = !key || key.includes('AIzaSyCdXXZ1V2ffyexBEghTub-Fm7Dl3mwrCSs');
-
-  if (useMock) {
-    console.warn('[gemini] Using premium intelligent fallback/demo mode.');
-    const reply = getMockReply(userMessage);
-    if (stream) {
-      return {
-        stream: (async function* () {
-          const chunks = reply.match(/.{1,15}(?:\s|$)/g) || [reply];
-          for (const chunk of chunks) {
-            yield { text: () => chunk };
-            await new Promise((r) => setTimeout(r, 20));
-          }
-        })(),
-      };
-    }
-    return reply;
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(key);
-    const systemInstruction = buildSystemInstruction({ language, preferredLanguage });
-
-    const model = genAI.getGenerativeModel({
-      model: MODEL_ID,
-      systemInstruction,
-    });
-
-    const seed = [
-      {
-        role: 'user',
-        parts: [{ text: 'You are Sportzy Bot. Professional sports analyst. Confirm operational readiness for all sports, rules, players, and matches.' }],
-      },
-      {
-        role: 'model',
-        parts: [{ text: "Confirmed. Sportzy Bot systems are fully initialized to expertly discuss official rules, player profiles, live/historical matches, and strategic frameworks across any sport globally." }],
-      },
-    ];
-
-    const past = toGeminiHistory(history).slice(-40);
-    const chat = model.startChat({
-      history: [...seed, ...past],
-      generationConfig: { maxOutputTokens: 1024 },
-    });
-
-    if (stream) {
-      return await chat.sendMessageStream(userMessage);
-    }
-    const result = await chat.sendMessage(userMessage);
-    return (await result.response).text();
-  } catch (err) {
-    console.error('[gemini] API call failed, falling back to smart demo response:', err.message);
-    const reply = getMockReply(userMessage);
+  if (!key) {
+    console.warn('[groq] No GROQ_API_KEY configured in .env');
+    const reply =
+      'Sportzy Bot is not configured. Please set GROQ_API_KEY in the backend .env file.';
     if (stream) {
       return {
         stream: (async function* () {
@@ -214,6 +248,129 @@ async function generateChatResponse(opts) {
       };
     }
     return reply;
+  }
+
+  const client = new Groq({ apiKey: key });
+  const systemPrompt = buildSystemInstruction({ language, preferredLanguage });
+  const pastHistory = toGroqHistory(history).slice(-30); // last 30 turns
+
+  // Build the messages array
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...pastHistory,
+    { role: 'user', content: userMessage },
+  ];
+
+  async function runWithModel(modelId) {
+    // Step 1: Initial call with tool available
+    const res1 = await client.chat.completions.create({
+      model: modelId,
+      messages,
+      tools: [SPORTS_SEARCH_TOOL],
+      tool_choice: 'auto',
+      max_tokens: 1200,
+      temperature: 0.6,
+    });
+
+    const choice1 = res1.choices[0];
+
+    // Step 2: If model wants to use the search tool, execute it
+    if (choice1.finish_reason === 'tool_calls' && choice1.message.tool_calls?.length) {
+      const allToolMessages = [choice1.message];
+
+      // Execute all requested tool calls
+      for (const toolCall of choice1.message.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments || '{}');
+        console.log(`[groq] Tool call: ${toolCall.function.name}`, JSON.stringify(args));
+        const toolResult = await executeTool(toolCall.function.name, args);
+        allToolMessages.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: toolResult,
+        });
+      }
+
+      // Step 3: Second call with tool results to get final answer
+      const messagesWithToolResults = [...messages, ...allToolMessages];
+      const res2 = await client.chat.completions.create({
+        model: modelId,
+        messages: messagesWithToolResults,
+        max_tokens: 1200,
+        temperature: 0.6,
+      });
+
+      const finalText = sanitizeContent(res2.choices[0].message.content || '');
+
+      if (stream) {
+        return {
+          stream: (async function* () {
+            // Stream the final answer word-by-word — never the raw tool JSON
+            const words = finalText.match(/\S+\s*/g) || [finalText];
+            for (const word of words) {
+              // Extra safety: skip any chunk that is tool-call JSON
+              if (isToolCallJSON(word)) continue;
+              yield { text: () => word };
+              await new Promise((r) => setTimeout(r, 12));
+            }
+          })(),
+        };
+      }
+      return finalText;
+    }
+
+    // No tool call — direct answer
+    const directText = sanitizeContent(choice1.message.content || '');
+
+    // Safety: if somehow the raw tool JSON ended up as the "direct" reply, retry without tool
+    if (isToolCallJSON(directText)) {
+      console.warn('[groq] Tool-call JSON leaked into direct content — filtering');
+      const safeReply = "I'm searching for that information. Please try asking again!";
+      if (stream) {
+        return {
+          stream: (async function* () {
+            yield { text: () => safeReply };
+          })(),
+        };
+      }
+      return safeReply;
+    }
+
+    if (stream) {
+      return {
+        stream: (async function* () {
+          const words = directText.match(/\S+\s*/g) || [directText];
+          for (const word of words) {
+            if (isToolCallJSON(word)) continue;
+            yield { text: () => word };
+            await new Promise((r) => setTimeout(r, 12));
+          }
+        })(),
+      };
+    }
+    return directText;
+  }
+
+  // Try primary model, fall back to secondary
+  try {
+    return await runWithModel(PRIMARY_MODEL);
+  } catch (err) {
+    console.error(`[groq] ${PRIMARY_MODEL} failed: ${err.message}`);
+    try {
+      console.warn(`[groq] Falling back to ${FALLBACK_MODEL}...`);
+      return await runWithModel(FALLBACK_MODEL);
+    } catch (err2) {
+      console.error(`[groq] ${FALLBACK_MODEL} also failed: ${err2.message}`);
+      const reply =
+        "I'm having trouble connecting right now. Please try again in a moment!";
+      if (stream) {
+        return {
+          stream: (async function* () {
+            yield { text: () => reply };
+          })(),
+        };
+      }
+      return reply;
+    }
   }
 }
 

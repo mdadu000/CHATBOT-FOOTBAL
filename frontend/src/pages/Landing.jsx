@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Activity, Mic, Sparkles, Trophy, Zap, Globe, ArrowRight, Bot } from 'lucide-react';
+import { Activity, Mic, Sparkles, Trophy, Zap, Globe, ArrowRight, Bot, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Landing() {
@@ -85,7 +85,7 @@ export default function Landing() {
               className="inline-flex items-center gap-2 rounded-full border border-neon/30 bg-neon/5 px-4 py-1.5 text-xs font-semibold text-neon backdrop-blur-md mb-8 shadow-[0_0_15px_rgba(0,255,157,0.1)]"
             >
               <span className="flex h-2 w-2 rounded-full bg-neon animate-pulse" />
-              <Sparkles className="h-3.5 w-3.5" /> Next-Gen AI Football & Sports Specialist
+              <Sparkles className="h-3.5 w-3.5" /> Next-Gen AI Global Sports Specialist
             </motion.div>
 
             {/* Premium Header Typography */}
@@ -106,7 +106,7 @@ export default function Landing() {
               variants={itemVariants}
               className="mt-6 text-lg md:text-xl text-slate-400 max-w-2xl leading-relaxed"
             >
-              Command pure football stats, tactical breakdown readouts, and global multi-language commentary powered by advanced AI. Zero generic filler—just raw stadium energy.
+              Command professional stats, tactical breakdown readouts, and global multi-language commentary across every sporting discipline. Zero generic filler—just raw expertise for any game.
             </motion.p>
 
             {/* Dynamic CTAs */}
@@ -136,7 +136,7 @@ export default function Landing() {
             {/* Floating Quick Stats Cards */}
             <motion.div
               variants={containerVariants}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mt-16 max-w-3xl"
+              className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full mt-16 max-w-4xl"
             >
               <motion.div
                 variants={itemVariants}
@@ -172,6 +172,18 @@ export default function Landing() {
                 </div>
                 <div className="text-xl font-bold text-white">8 Languages</div>
                 <div className="text-xs text-slate-400 mt-0.5">Native multi-tongue voice engines</div>
+              </motion.div>
+
+              <motion.div
+                variants={itemVariants}
+                whileHover={{ y: -4 }}
+                className="glass-panel rounded-2xl p-4 flex flex-col items-center text-center border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition"
+              >
+                <div className="p-2 rounded-lg bg-neon/10 text-neon mb-2">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <div className="text-xl font-bold text-white">Zero to Pro</div>
+                <div className="text-xs text-slate-400 mt-0.5">Custom beginner training paths</div>
               </motion.div>
             </motion.div>
           </motion.div>
